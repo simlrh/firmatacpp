@@ -4,12 +4,18 @@
 namespace firmata {
 
 	FirmSerial::FirmSerial(const std::string &port, 
-		uint32_t baudrate) : m_serial(port, baudrate, serial::Timeout::simpleTimeout(50)) {}
+		uint32_t baudrate) : m_serial(port, baudrate, serial::Timeout::simpleTimeout(50)) 
+	{
+	}
 
+	FirmSerial::~FirmSerial()
+	{
+		m_serial.close();
+	}
 
 	void FirmSerial::open()
 	{
-		m_serial.open();
+		if (!m_serial.isOpen()) m_serial.open();
 	}
 
 	bool FirmSerial::isOpen()
@@ -20,11 +26,6 @@ namespace firmata {
 	void FirmSerial::close()
 	{
 		m_serial.close();
-	}
-
-	bool FirmSerial::waitForBytes()
-	{
-		return m_serial.waitReadable() && m_serial.available();
 	}
 
 	size_t FirmSerial::available()
@@ -42,6 +43,20 @@ namespace firmata {
 	size_t FirmSerial::write(std::vector<uint8_t> bytes)
 	{
 		return m_serial.write(bytes);
+	}
+
+	std::vector<PortInfo> FirmSerial::listPorts()
+	{
+		std::vector<serial::PortInfo> ports = serial::list_ports();
+		std::vector<firmata::PortInfo> port_list;
+		for (auto port : ports) {
+			port_list.push_back({
+				port.port,
+				port.description,
+				port.hardware_id
+			});
+		}
+		return port_list;
 	}
 
 }
