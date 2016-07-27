@@ -7,6 +7,7 @@ namespace firmata {
 
 	FirmSerial::FirmSerial(const std::string &port, uint32_t baudrate)
 	try : m_serial(port, baudrate, serial::Timeout::simpleTimeout(25)) {
+#ifndef WIN32
 	  serial::Timeout t = m_serial.getTimeout();
 	  t.read_timeout_constant = 5000;
 	  m_serial.setTimeout(t);
@@ -14,6 +15,7 @@ namespace firmata {
 	  int count = m_serial.available();
 	  t.read_timeout_constant = 25;
 	  m_serial.setTimeout(t);
+#endif
 	}
 	catch (serial::IOException e) {
 	  std::cout << e.what() << std::endl;

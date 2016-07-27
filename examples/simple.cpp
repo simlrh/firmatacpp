@@ -3,7 +3,9 @@
 #include "firmata.h"
 #include "firmserial.h"
 
+#ifndef WIN32
 #include "unistd.h"
+#endif
 
 /*
  * Detect first serial port with a StandardFirmata interface
@@ -28,10 +30,14 @@ int main(int argc, const char* argv[])
 
 		try {
 			serialio = new firmata::FirmSerial(port.port.c_str());
+#ifndef WIN32
 			if (serialio->available()) {
 				sleep(3); // Seems necessary on linux
 				f = new firmata::Firmata<firmata::Base, firmata::I2C>(serialio);
 			}
+#else
+			f = new firmata::Firmata<firmata::Base, firmata::I2C>(serialio);
+#endif
 		} 
 		catch(firmata::IOException e) {
 			std::cout << e.what() << std::endl;
@@ -49,7 +55,7 @@ int main(int argc, const char* argv[])
 	}
 
 	try {
-		f->setSamplingInterval(50);
+		f->setSamplingInterval(100);
 
 		std::cout << f->name << std::endl;
 		std::cout << f->major_version << std::endl;

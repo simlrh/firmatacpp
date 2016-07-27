@@ -10,6 +10,7 @@ namespace firmata {
 		: m_firmIO(firmIO), name(""), major_version(0), minor_version(0), is_ready(false)
 	{
 		m_firmIO->open();
+		standardCommand({ FIRMATA_REPORT_VERSION });
 		is_ready = awaitResponse(FIRMATA_REPORT_VERSION);
 		if (is_ready) {
 			init();
@@ -441,7 +442,7 @@ namespace firmata {
 		for (uint8_t pin = 0; pin < 128; pin++) {
 			if (pins[pin].supported_modes.size()) {
 				sysexCommand({ FIRMATA_PIN_STATE_QUERY, pin });
-				awaitSysexResponse(FIRMATA_PIN_STATE_RESPONSE, 100);
+//				awaitSysexResponse(FIRMATA_PIN_STATE_RESPONSE, 100);
 			}
 		}
 	}
