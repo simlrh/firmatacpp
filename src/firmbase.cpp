@@ -10,7 +10,7 @@ namespace firmata {
 		: m_firmIO(firmIO), name(""), major_version(0), minor_version(0), is_ready(false)
 	{
 		m_firmIO->open();
-		reportFirmware();
+		is_ready = awaitResponse(FIRMATA_REPORT_VERSION);
 		if (is_ready) {
 			init();
 		}
@@ -29,6 +29,7 @@ namespace firmata {
 
 	void Base::init()
 	{
+		reportFirmware();
 		initPins();
 		capabilityQuery();
 		analogMappingQuery();
@@ -77,7 +78,7 @@ namespace firmata {
 		sysexCommand(bytes);
 	}
 
-	void Base::analogWrite(char* channel, uint32_t value)
+	void Base::analogWrite(const std::string& channel, uint32_t value)
 	{
 		if (channel[0] != 'A') return;
 		for (uint8_t pin = 0; pin < 127; pin++) {
@@ -99,7 +100,7 @@ namespace firmata {
 		return pins[pin].value;
 	}
 
-	uint32_t Base::analogRead(char* channel)
+	uint32_t Base::analogRead(const std::string& channel)
 	{
 		if (channel[0] != 'A') return 0;
 		for (uint8_t pin = 0; pin < 127; pin++) {
@@ -151,8 +152,6 @@ namespace firmata {
 
 	uint16_t Base::parse(uint32_t num_commands)
 	{
-		if (!m_firmIO->available()) return 0;
-
 		std::vector<uint8_t> new_data = m_firmIO->read(FIRMATA_MSG_LEN);
 		std::vector<uint8_t> parse_buffer(saved_buffer);
 		parse_buffer.insert(parse_buffer.end(), new_data.begin(), new_data.end());
@@ -283,6 +282,7 @@ namespace firmata {
 
 
 			return true;
+
 		case(FIRMATA_CAPABILITY_RESPONSE) :
 			pin = 0;
 			is_mode_byte = true;
@@ -322,11 +322,12 @@ namespace firmata {
 			for (pin = 0; pin < data.size(); pin++) {
 				pins[pin].analog_channel = data[pin];
 			}
-											  return true;
+			return true;
 
 		case(FIRMATA_STRING) :
 			handleString(stringFromBytes(data.begin(), data.end()));
 			return true;
+
 		}
 
 		return false;
@@ -360,7 +361,7 @@ namespace firmata {
 		std::chrono::time_point<std::chrono::system_clock> start, current;
 		start = std::chrono::system_clock::now();
 		std::chrono::duration<std::chrono::system_clock::rep,
-			std::chrono::system_clock::period> timeoutDuration(timeout * 10000), elapsed;
+			std::chrono::system_clock::period> timeoutDuration(timeout * 1000000), elapsed;
 
 		uint8_t first_nibble = FIRMATA_FIRST_NIBBLE(command);
 		uint16_t result;
@@ -384,7 +385,7 @@ namespace firmata {
 		std::chrono::time_point<std::chrono::system_clock> start, current;
 		start = std::chrono::system_clock::now();
 		std::chrono::duration<std::chrono::system_clock::rep, 
-			std::chrono::system_clock::period> timeoutDuration(timeout*1000), elapsed;
+			std::chrono::system_clock::period> timeoutDuration(timeout * 1000000), elapsed;
 
 		uint16_t result, result_sysex, result_command;
 		do {
@@ -440,7 +441,7 @@ namespace firmata {
 		for (uint8_t pin = 0; pin < 128; pin++) {
 			if (pins[pin].supported_modes.size()) {
 				sysexCommand({ FIRMATA_PIN_STATE_QUERY, pin });
-				awaitSysexResponse(FIRMATA_PIN_STATE_RESPONSE, 500);
+				awaitSysexResponse(FIRMATA_PIN_STATE_RESPONSE, 100);
 			}
 		}
 	}

@@ -1,9 +1,11 @@
 #ifndef __FIRMBASE_H__
 #define __FIRMBASE_H__
 
-#include "firmatacpp_export.h"
+#include <firmatacpp_export.h>
 #include "firmata_constants.h"
 #include "firmio.h"
+
+#include <string>
 
 namespace firmata {
 
@@ -26,11 +28,11 @@ namespace firmata {
 		void pinMode(uint8_t pin, uint8_t mode);
 		void digitalWrite(uint8_t pin, uint8_t value);
 		void analogWrite(uint8_t pin, uint32_t value);
-		void analogWrite(char* channel, uint32_t value);
+		void analogWrite(const std::string& channel, uint32_t value);
 
 		uint8_t digitalRead(uint8_t pin);
 		uint32_t analogRead(uint8_t pin);
-		uint32_t analogRead(char* channel);
+		uint32_t analogRead(const std::string& channel);
 
 		void standardCommand(std::vector<uint8_t> standard_command);
 		void sysexCommand(uint8_t sysex_command);

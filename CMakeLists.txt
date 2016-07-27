@@ -1,5 +1,7 @@
-cmake_minimum_required(VERSION 2.8.5)
+cmake_minimum_required(VERSION 3.1)
 project(firmatacpp)
+
+set (CMAKE_CXX_STANDARD 11)
 
 option(FIRMATA_BUILD_EXAMPLES "Build firmata example programs" YES)
 

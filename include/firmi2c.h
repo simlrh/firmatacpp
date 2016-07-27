@@ -1,7 +1,7 @@
 #ifndef __FIRMI2C_H__
 #define __FIRMI2C_H__
 
-#include "firmatacpp_export.h"
+#include <firmatacpp_export.h>
 #include "firmata_constants.h"
 #include "firmbase.h"
 #include "firmio.h"
@@ -11,13 +11,13 @@
 #define FIRMATA_I2C_CONFIG	0x78
 
 #define FIRMATA_I2C_AUTO_RESTART	0x40
-#define FIRMATA_I2C_10_BIT			0x20
-#define FIRMATA_I2C_WRITE			0x00
+#define FIRMATA_I2C_10_BIT		0x20
+#define FIRMATA_I2C_WRITE		0x00
 #define FIRMATA_I2C_READ_ONCE		0x08
 #define FIRMATA_I2C_READ_CONTINUOUS	0x10
 #define FIRMATA_I2C_STOP_READING	0x18
 
-#define FIRMATA_I2C_REGISTER_NOT_SPECIFIED 0xFF
+#define FIRMATA_I2C_REGISTER_NOT_SPECIFIED 0x00
 
 namespace firmata {
 
@@ -44,4 +44,4 @@ namespace firmata {
 
 }
 
-#endif // !__FIRMBASE_H__
+#endif // !__FIRMI2C_H__

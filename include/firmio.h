@@ -3,6 +3,8 @@
 
 #include "firmata_constants.h"
 
+#include <cstddef>
+
 namespace firmata {
 
 	class FirmIO{
@@ -15,6 +17,21 @@ namespace firmata {
 		virtual size_t write(std::vector<uint8_t> bytes) = 0;
 	};
 
+	class IOException : public std::exception {
+	public:
+	    const char * what () const throw ()
+	    {
+	      return "Firmata IO Exception";
+	    }
+	};
+
+	class NotOpenException : public std::exception {
+	public:
+	    const char * what () const throw ()
+	    {
+	      return "Firmata Connection Not Open";
+	    }
+	};
 }
 
 #endif
