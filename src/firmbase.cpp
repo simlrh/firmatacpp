@@ -362,7 +362,7 @@ namespace firmata {
 		std::chrono::time_point<std::chrono::system_clock> start, current;
 		start = std::chrono::system_clock::now();
 		std::chrono::duration<std::chrono::system_clock::rep,
-			std::chrono::system_clock::period> timeoutDuration(timeout * 1000000), elapsed;
+			std::chrono::system_clock::period> timeoutDuration(timeout * 10000), elapsed;
 
 		uint8_t first_nibble = FIRMATA_FIRST_NIBBLE(command);
 		uint16_t result;
@@ -386,7 +386,7 @@ namespace firmata {
 		std::chrono::time_point<std::chrono::system_clock> start, current;
 		start = std::chrono::system_clock::now();
 		std::chrono::duration<std::chrono::system_clock::rep, 
-			std::chrono::system_clock::period> timeoutDuration(timeout * 1000000), elapsed;
+			std::chrono::system_clock::period> timeoutDuration(timeout * 10000), elapsed;
 
 		uint16_t result, result_sysex, result_command;
 		do {
