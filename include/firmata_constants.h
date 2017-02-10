@@ -35,7 +35,7 @@
 #define FIRMATA_NTH_BIT(x,y)			((x) & (1 << (y)))
 
 #define FIRMATA_DIGITAL_MESSAGE         0x90 // send data for a digital pin port
-#define FIRMATA_SET_DIGITAL_PIN			0xF4 // send data form single digital pin
+#define FIRMATA_SET_DIGITAL_PIN			0xF5 // send data form single digital pin
 #define FIRMATA_ANALOG_MESSAGE          0xE0 // send data for an analog pin (or PWM)
 #define FIRMATA_ANALOG_MESSAGE          0xE0 // send data for an analog pin (or PWM)
 #define FIRMATA_REPORT_ANALOG           0xC0 // enable analog input by pin #
