@@ -1,0 +1,17 @@
+*.sw?
+*.o
+core
+bluez-tools/
+prog
+lescan
+temperature
+Makefile
+*.so.*
+*.so
+*.pc
+config.log
+config.status
+autom4te.cache
+.deps
+tests/*.result*
+tests/*.test

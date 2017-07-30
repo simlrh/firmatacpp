@@ -15,6 +15,7 @@ namespace firmata {
 		virtual size_t available() = 0;
 		virtual std::vector<uint8_t> read(size_t size = 1) = 0;
 		virtual size_t write(std::vector<uint8_t> bytes) = 0;
+                virtual ~FirmIO() {};
 	};
 
 	class IOException : public std::exception {

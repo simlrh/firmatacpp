@@ -1,5 +1,7 @@
 #include "firmbase.h"
 
+#include <string.h>
+#include <unistd.h>
 #include <chrono>
 #include <string>
 #include <iostream>
@@ -30,6 +32,8 @@ namespace firmata {
 
 	void Base::init()
 	{
+                // TODO each of these should check the return from
+                // await[Sysex]Response and throw if necessary
 		reportFirmware();
 		initPins();
 		capabilityQuery();
@@ -50,6 +54,7 @@ namespace firmata {
 		standardCommand({ FIRMATA_SET_DIGITAL_PIN, pin, value });
 	}
 
+        // pin is digital pin ID
 	void Base::analogWrite(uint8_t pin, uint32_t value)
 	{
 		if (pin > 15 || value > FIRMATA_MAX) {
@@ -64,6 +69,7 @@ namespace firmata {
 		standardCommand({ analog_write_pin, lsb, msb });
 	}
 
+        // pin is digital pin ID
 	void Base::analogWriteExtended(uint8_t pin, uint32_t value)
 	{
 		pins[pin].value = value;
@@ -79,21 +85,22 @@ namespace firmata {
 		sysexCommand(bytes);
 	}
 
+        // arg is "AN" where N is analog pin ID
 	void Base::analogWrite(const std::string& channel, uint32_t value)
 	{
 		if (channel[0] != 'A') return;
-		for (uint8_t pin = 0; pin < 127; pin++) {
-			if (pins[pin].analog_channel + '0' == channel[1]) {
-				pins[pin].value = value;
-				analogWrite(pin, value);
-				return;
-			}
+                uint8_t apin = std::stoul(channel.substr(1));
+                uint8_t pin = apins[apin];
+                if (pin < 128) {
+                    pins[pin].value = value;
+                    analogWrite(pin, value);
+                    return;
 		}
 	}
 
 	uint8_t Base::digitalRead(uint8_t pin)
 	{
-		return pins[pin].value;
+		return pins[pin].value?1:0;
 	}
 
 	uint32_t Base::analogRead(uint8_t pin)
@@ -101,17 +108,19 @@ namespace firmata {
 		return pins[pin].value;
 	}
 
+        // arg is "AN" where N is analog pin ID
 	uint32_t Base::analogRead(const std::string& channel)
 	{
 		if (channel[0] != 'A') return 0;
-		for (uint8_t pin = 0; pin < 127; pin++) {
-			if (pins[pin].analog_channel + '0' == channel[1]) {
-				return pins[pin].value;
-			}
+                uint8_t apin = std::stoul(channel.substr(1));
+                uint8_t pin = apins[apin];
+                if (pin < 128) {
+                    return pins[pin].value;
 		}
 		return 0;
 	}
 
+        // arg is analog pin ID
 	void Base::reportAnalog(uint8_t channel, uint8_t enable)
 	{
 		uint8_t report_channel = FIRMATA_REPORT_ANALOG | channel;
@@ -122,6 +131,11 @@ namespace firmata {
 	{
 		uint8_t report_port = FIRMATA_REPORT_DIGITAL | port;
 		standardCommand({ report_port, enable });
+	}
+
+	void Base::reportDigitalPin(uint8_t pin, uint8_t enable)
+	{
+            reportDigital(pin>>3, enable);
 	}
 
 	void Base::setSamplingInterval(uint32_t intervalms)
@@ -186,11 +200,9 @@ namespace firmata {
 					if (msb > 0x7F) continue; // Why do we sometimes get only 1 data byte?
 
 					value = FIRMATA_COMBINE_LSB_MSB(lsb, msb);
-					for (int pin = 0; pin < 128; pin++) {
-						if (pins[pin].analog_channel == channel) {
-							pins[pin].value = value;
-							break;
-						}
+                                        uint8_t pin = apins[channel];
+                                        if (pin < 128) {
+                                            pins[pin].value = value;
 					}
 					i += 2;
 					completed_commands++;
@@ -244,12 +256,17 @@ namespace firmata {
 
 					std::vector<uint8_t> sysex_buffer;
 					for (i = i + 2; i < parse_buffer.size() && parse_buffer[i] != FIRMATA_END_SYSEX; i++) { // Copy sysex and skip to next command
+                                                if (parse_buffer[i] > 127) {
+                                                    // bad character, drop what we have so far and go back to parsing new command
+                                                    sysex_buffer.clear();
+                                                    break;
+                                                }
 						sysex_buffer.push_back(parse_buffer[i]);
 					}
 					if (i == parse_buffer.size()) {
 						interrupted_command = true;
 					}
-					else {
+                                        else if (!sysex_buffer.empty()) {
 						handleSysex(subcommand, sysex_buffer);
 						completed_commands++;
 						last_completed = (whole_command << 8) | subcommand;
@@ -293,18 +310,18 @@ namespace firmata {
 				pins[pin].resolutions = {};
 			}
 
-			pin = 0;
+			m_numPins = 0;
 			for (uint8_t byte : data) {
 				if (byte == 127) {
-					pin++;
+					m_numPins++;
 					is_mode_byte = true;
 				}
 				else if (is_mode_byte) {
-					pins[pin].supported_modes.push_back(byte);
+					pins[m_numPins].supported_modes.push_back(byte);
 					is_mode_byte = false;
 				}
 				else {
-					pins[pin].resolutions.push_back(byte);
+					pins[m_numPins].resolutions.push_back(byte);
 					is_mode_byte = true;
 				}
 			}
@@ -322,6 +339,7 @@ namespace firmata {
 		case(FIRMATA_ANALOG_MAPPING_RESPONSE) :
 			for (pin = 0; pin < data.size(); pin++) {
 				pins[pin].analog_channel = data[pin];
+                                apins[data[pin]] = pin;
 			}
 			return true;
 
@@ -350,8 +368,11 @@ namespace firmata {
 	std::string Base::stringFromBytes(std::vector<uint8_t>::iterator begin, std::vector<uint8_t>::iterator end)
 	{
 		std::string s;
-		for (auto byte = begin; byte < end - 1; ++byte) {
-			s += (*byte) | (*(++byte) << 7);
+		//for (auto byte = begin; byte < end - 1; ++byte) {
+			//s += (*byte) | (*(++byte) << 7);
+		//}
+		for (auto byte = begin; byte < end; ++byte) {
+                        s+=(*byte);
 		}
 		return s;
 	}
@@ -362,7 +383,8 @@ namespace firmata {
 		std::chrono::time_point<std::chrono::system_clock> start, current;
 		start = std::chrono::system_clock::now();
 		std::chrono::duration<std::chrono::system_clock::rep,
-			std::chrono::system_clock::period> timeoutDuration(timeout * 10000), elapsed;
+			std::chrono::system_clock::period> elapsed;
+                std::chrono::milliseconds timeoutDuration(timeout); 
 
 		uint8_t first_nibble = FIRMATA_FIRST_NIBBLE(command);
 		uint16_t result;
@@ -385,11 +407,13 @@ namespace firmata {
 		bool succeeded = true;
 		std::chrono::time_point<std::chrono::system_clock> start, current;
 		start = std::chrono::system_clock::now();
-		std::chrono::duration<std::chrono::system_clock::rep, 
-			std::chrono::system_clock::period> timeoutDuration(timeout * 10000), elapsed;
+		std::chrono::duration<std::chrono::system_clock::rep,
+			std::chrono::system_clock::period> elapsed;
+                std::chrono::milliseconds timeoutDuration(timeout); 
 
 		uint16_t result, result_sysex, result_command;
 		do {
+                        usleep(1000);
 			current = std::chrono::system_clock::now();
 			elapsed = current - start;
 			if (elapsed > timeoutDuration) {
@@ -407,6 +431,9 @@ namespace firmata {
 
 	void Base::initPins()
 	{
+                // clear analog pin mappings
+                memset(apins, sizeof(apins), 128);
+
 		for (int i = 0; i < 128; i++) {
 			pins[i].mode = 255;
 			pins[i].analog_channel = 127;
@@ -414,6 +441,7 @@ namespace firmata {
 			pins[i].resolutions = {};
 			pins[i].value = 0;
 		}
+                m_numPins = 0;
 	}
 
 	void Base::reportFirmware() {
@@ -446,4 +474,18 @@ namespace firmata {
 			}
 		}
 	}
+        uint8_t Base::getPinCapResolution(uint8_t pin, uint8_t mode) const {
+            std::vector<uint8_t>::const_iterator pm = pins[pin].supported_modes.begin();
+            std::vector<uint8_t>::const_iterator pr = pins[pin].resolutions.begin();
+            while (pm !=pins[pin].supported_modes.end())
+            {
+                if (*pm == mode)
+                {
+                    return *pr;
+                }
+                ++pm;
+                ++pr;
+            }
+            return 0;
+        }
 }

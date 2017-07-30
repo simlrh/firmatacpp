@@ -1,0 +1,186 @@
+Haskell Notation
+----------------
+
+I've used Haskell style notation. Functions, dictionaries and arrays are
+essentially similar in that both map an input to an output, i.e. A -> B.
+Tuples are indicated with "," and "()". Returned lists or arrays with [].
+Alternatives are indicated with |. For arguments, The type is written first, and
+the name (if applicable) follows after a  "." .
+
+
+Attributes
+----------
+
+The device contains an array of attributes. The index of tha attributes in known
+as the handle. The attributes themselves consist of a "type" and a "value". The
+type is a type code and is represented as a UUID.  UUIDs are either 16 or 128
+bits long. 16 bit UUIDs are converted to proper 128 bit UUID by setting the
+remaining 112 bits to some fixed values. The purpose of 16 bit UUIDs is to save
+on bandwidth.
+ 
+Every attribute must have a type. The value is just plain old data (a bunch of
+bytes) and may be readable or writable[*] or neither. The read/write status of
+an attribute is defined by a higher level protocol and there is no way of
+querying this.
+
+[*] The data may be also indicatable or notifiable. In these cases, the
+bluetooth device (the server) may send the attribute values back to the client
+at any time without solicitation.
+
+So, in essence the server has an array of:
+[ (Handle, Type, Data | Null)]
+
+Being an array, one can naturally index it using Handle. In some cases however
+it is also possible to index it by the Type in some cases.
+
+There are various function for extracting information from the server:
+
+find_information: [(Handle, Type)]
+
+This gets a list of attributes back from the server as the handel and type. The
+data can be read from an attribute in one of two ways:
+
+read: Handle->Data | Error
+
+which reads the data from a given handle. Alternatively, data can be read by the
+Type:
+
+read_by_type: Type -> [(Handle | Data)]
+
+Since several attributes may share a type (and often do), read_by_type must be
+able to return a of attributes. Since the type is known, all it has to give back
+is the Handle and the data.
+
+Naturally, there exist commands for writing too.
+
+
+There is also a concept of Grouping as well. A group is a contiguous set of
+attributes (contiguous according to the handle). Groups can be read by their
+type. Groups are delimited by attributes of the specified type. A sample set of
+attributes, as [(Handle, Type, Data)] follows. Note that the Types and data are
+Arbitrary. If the group type is specified to be 0xdead, then thr grouping
+appears as:
+
+0001  dead  some data     \
+0002  2a00  xxxxx          |  First group
+0003  5600  xxxxxxxx      /_________________
+0004  dead  more data     \
+0005  1234  xxxxxxx        |  Second group
+0006  4567  xxxxxxxx       |
+0007  1231  xxxxx         /_________________
+0008  dead  another datum \   Third group
+0009  wtf                 /
+EOF
+
+The command to read this is:
+
+read_by_group_type Type->[(Handle, Handle, Data)]
+
+where, the start and end handle along with the data for the start handle is
+returned, so in this case
+
+read_by_group_type(dead) will return:
+
+0001 0003 "some data"
+0005 0007 "more data"
+0008 ffff "another datum"
+
+ffff being the highest possible handle number indicates that nothing can follow.
+
+It would appear that in the absence of efficiency concerns, one could replicate
+all the functions by queryiing every attribute with find_information and then
+reading whichever handles are necessary with read.
+
+Actually reading data
+---------------------
+
+The BLE packet length is a mere 23 bytes. Optionally both devices may be able to
+lengthen it, but this is not normally supported.
+
+In practice each query can only be answered with a very limited amount of data.
+Note that each of the functions above (except read) returns a list of handles.
+In the protocol, each function actually takes a start and end handle as an
+argument which limits which handles will be returned. In order to get a complete
+list of things, one must keep setting the start handle to one plus the last
+handle returned and reissuing the call. When no handles can be returned an error
+message is sent back, indicating that no handles exist in the range.
+
+The read_by_type function is actually more like:
+
+read_by_type: (Type, Handle.first, Handle.last) -> [ (Handle, Data) ] | Error.no_attribute_in_range
+
+
+
+
+The Generic Attribute Profile 
+-----------------------------
+
+The generic attribute (GATT) profile defines a standard set of attributes,
+types and groups along with mechanisms for discovery.
+
+A GATT profile consists of a number of services. A service defines a set of
+"characteristics". A characteristic pas properties (e.g. readable, writable), 
+a value and zero or more descriptors (e.g. some textual description).
+
+Primary services are groups of handles which have the name <<Primary Service>>
+aka 0x2800. Therefore 
+	read_group_by_type(0x2800) 
+returns the list of services.  Any handle falling in the the group belongs to
+the service named by that group.  The names are either ones specified by the SIG
+or custom ones. 
+
+Within each service there is a list of characteristics. Each characteristic
+contains a group of handles. However, it is not possible to use
+read_by_group_type on <<Characteristic>> (aka 2803), since characteristic groups
+are terminated either by the presence of the next characteristic or by the next
+service. Recall that read_by_group_type insists that the delimiter must be the
+type.
+
+
+A characteristic consists of:
+
+* a characteristic definition (Type <<Characteristic>>)
+  which includes the Type of the characteristic, the handle of the
+  characteristic value and some miscellaneous flags.
+
+* A characteristic value. Naturally, this has the Type of the characteristic.
+  The value may not actually be readable, or writable. For example the value
+  might only be pushed to the client via notifications.
+
+* Additional descriptors. The descriptors contain miscellaneous extra
+  information about the characteristic. The descriptors have a Type which
+  declares the semantic meaning of the descriptor. The meaning of the data is
+  naturally dependent on the Type.
+
+  Common descriptors are:
+
+  <<Characteristic User Description>> (2901) Some text describing the
+  characteristic.
+
+  <<Client Characteristic Configuration>> (2902) A write only attribute that is
+  written to enable and disable notifications and indications on thr
+  characteristic value.
+  
+  There are others too.
+
+
+
+The list of characteristics can be read by reading type <<Characteristic>> aka 2803.
+	read_by_type 0x2803
+The return from this is for each characteristic:
+
+<Property> <Handle> <Type>
+
+Property is a bit field indicating various properties, things like readable,
+writable, notifyable, and so on.
+
+Two services must always be present: <<Generic Access>> (aka 1800) and <<Generic
+Attribute>> (aka 1801)
+
+
+If a characteristic value is readable, it is indicated by the property. Also,
+the value will have handle <Handle> and type <Type>. It can be read by reading
+the handle or reading by it's type. In other words <Handle> and <Type> are
+(nearly?) tautological.
+
+

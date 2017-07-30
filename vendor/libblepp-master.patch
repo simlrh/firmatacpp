@@ -1,0 +1,57 @@
+--- ../libblepp-master.orig/Makefile.in	2017-03-06 16:13:49.000000000 +0000
++++ Makefile.in	2017-07-29 21:22:54.740176669 +0100
+@@ -88,14 +88,14 @@
+ install: install-so install-a install-hdr install-pkgconfig
+ 
+ 
+-install-a: $(archive)
++install-a: $(archive) | $(if $(wildcard $(lib)),,$(lib))
+ 	cp $(archive) $(lib)
+ 
+-install-so: $(soname) $(soname1) $(soname2)
++install-so: $(soname) $(soname1) $(soname2) | $(if $(wildcard $(lib)),,$(lib))
+ 	cp $(soname) $(soname1) $(soname2) $(lib)
+ 
+-install-hdr:
+-	cp -r blepp $(hdr)
++install-hdr: | $(if $(wildcard $(hdr)),,$(hdr))
++	cp -r $(srcdir)/blepp $(hdr)
+ 
+ install-pkgconfig:
+ 	[ "$(pkgconfig)" = "" ] || mkdir -p $(DESTDIR)$(pkgconfig)
+@@ -108,7 +108,7 @@
+ 
+ 
+ #Every .cc file in the tests directory is a test
+-TESTS=$(notdir $(basename $(wildcard tests/*.cc)))
++TESTS=$(notdir $(basename $(wildcard $(srcdir)/tests/*.cc)))
+ 
+ 
+ #Get the intermediate file names from the list of tests.
+@@ -137,12 +137,12 @@
+ 
+ #Build a test executable from a test program. On compile error,
+ #create an executable which declares the error.
+-tests/%.test: tests/%.cc $(LIBOBJS)
++tests/%.test: tests/%.cc $(LIBOBJS) | $(if $(wildcard tests),,tests)
+ 	$(CXX) $(CXXFLAGS) $^ -o $@ -I . $(LDFLAGS) $(LOADLIBES) || {  echo "echo 'Compile error!' ; return 126" > $@ ; chmod +x $@; }
+ 
+ #Run the program and either use it's output (it should just say OK)
+ #or a failure message
+-tests/%.result_: tests/%.test
++tests/%.result_: tests/%.test | $(if $(wildcard tests),,tests)
+ 	$< > $@ 2>&1 ; \
+ 	a=$$? ;\
+ 	if [ $$a != 0 ]; \
+@@ -169,7 +169,11 @@
+ 
+ include .deps
+ 
++$(LIBOBJS): $(foreach d,$(sort $(dir $(LIBOBJS))),$(if $(wildcard $d),,$d))
++tests/results: $(if $(wildcard tests),,tests)
+ 
++tests $(sort $(dir $(LIBOBJS))) $(lib) $(hdr):
++	mkdir -p $@
+ 
+ 
+ 
