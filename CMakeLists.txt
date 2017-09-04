@@ -10,9 +10,8 @@ if (FIRMATA_WITH_BLUETOOTH)
     include (ExternalProject)
 
     ExternalProject_Add(libblepp
-        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/libblepp-master
-        PATCH_COMMAND patch -p0 < ../libblepp-master.patch
-        CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/vendor/libblepp-master/configure --prefix=<INSTALL_DIR>
+        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/libblepp
+        CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/vendor/libblepp/configure --prefix=<INSTALL_DIR>
         BUILD_COMMAND ${MAKE})
     ExternalProject_Get_Property(libblepp install_dir)
     set(FIRMATA_BLESRC src/firmble.cpp)
@@ -57,6 +56,7 @@ set(FIRMATACPP_INCLUDES
 SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -g3" )
 
 add_library(firmatacpp ${FIRMATACPP_SOURCES} ${FIRMATA_BLESRC} ${FIRMATACPP_INCLUDES} ${FIRMATA_BLEHDR})
+add_dependencies(firmatacpp libblepp)
 generate_export_header(firmatacpp)
 set_target_properties(firmatacpp PROPERTIES
   COMPILE_FLAGS -DLIBSHARED_AND_STATIC_STATIC_DEFINE)
