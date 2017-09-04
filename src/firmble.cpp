@@ -30,6 +30,7 @@
 #include <blepp/blestatemachine.h> //for UUID. FIXME mofo
 #include <blepp/lescan.h>
 
+#include <time.h>
 #include <chrono>
 
 using namespace std;
@@ -39,14 +40,30 @@ using namespace BLEPP;
 #define DBG(__x...) \
     if (s_debug) { \
         std::ostringstream __s; \
-        __s << "DBG:" << syscall(SYS_gettid) << ":" << __FILE__ ":" << __LINE__ << ":" << __FUNCTION__ << ":" << __x << std::endl; \
+        struct timespec __t; \
+        std::ios __f(NULL); \
+        __f.copyfmt(__s); \
+        clock_gettime(CLOCK_REALTIME, &__t); \
+        __s << "DBG:" << syscall(SYS_gettid) << ":" \
+            << __t.tv_sec << "." << setfill('0') << setw(9) << __t.tv_nsec << ":"; \
+        __s.copyfmt(__f); \
+        __s << __FILE__ ":" << __LINE__ << ":" << __FUNCTION__ << ":" \
+            << __x << std::endl; \
         std::cerr <<__s.str(); \
     }
 
 #define DBGPKT(__d, __l) \
     if (s_debug) { \
         std::ostringstream __s; \
-        __s << "PKT:" << syscall(SYS_gettid) << ":" << __FILE__ ":" << __LINE__ << ":" << __FUNCTION__ << ":" << __l << ":" <<  hex << setw(2) ; \
+        struct timespec __t; \
+        std::ios __f(NULL); \
+        __f.copyfmt(__s); \
+        clock_gettime(CLOCK_REALTIME, &__t); \
+        __s << "PKT:" << syscall(SYS_gettid) << ":" \
+            << __t.tv_sec << "." << setfill('0') << setw(9) << __t.tv_nsec << ":"; \
+        __s.copyfmt(__f); \
+        __s << __FILE__ ":" << __LINE__ << ":" << __FUNCTION__ << ":" \
+            << __l << ":" <<  hex << setw(2) ; \
         auto __p = __d; \
         size_t __n = __l; \
         while (__n > 0) { \
@@ -60,7 +77,7 @@ using namespace BLEPP;
 
 namespace {
     // debug integration
-    int s_debug = 0;
+    int s_debug = 1;
 
     // time to shut down
     bool s_shutdown = false;
@@ -237,6 +254,31 @@ namespace firmata {
         return bytes;
     }
 
+    // firmata transmit data in batches
+    // call first with true then with false to release queued data
+    void FirmBle::write_batch(bool start)
+    {
+        if (start) {
+            m_writebatch = true;
+        } else {
+            m_writebatch = false;
+            bool queued = false;
+            {
+                std::lock_guard<std::mutex> lock(m_tx_lock);
+                if (!m_tx_queue.empty()) {
+                    queued = true;
+                }
+            }
+            // release any pending data
+            if (queued) {
+                DBG("waiting");
+                start_thread_and_wait(st_write);
+                pthread_yield();
+                DBG("waited");
+            }
+        }
+    }
+
     // firmata transmit data
     size_t FirmBle::write(std::vector<uint8_t> bytes)
     {
@@ -250,10 +292,14 @@ namespace firmata {
             std::lock_guard<std::mutex> lock(m_tx_lock);
             m_tx_queue.push(bytes);
         }
-        DBG("waiting");
-        start_thread_and_wait(st_write);
-        pthread_yield();
-        DBG("waited");
+        if (m_writebatch == false) {
+            DBG("waiting");
+            start_thread_and_wait(st_write);
+            pthread_yield();
+            DBG("waited");
+        } else {
+            DBG("batched mode");
+        }
     }
 
     // firmata retrieve list of ports

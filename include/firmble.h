@@ -38,6 +38,9 @@ namespace firmata {
 		virtual std::vector<uint8_t> read(size_t size = 1) override;
                 // firmata transmit data
 		virtual size_t write(std::vector<uint8_t> bytes) override;
+                // firmata transmit data in batches
+                // call first with true then with false to release queued data
+		void write_batch(bool start);
                 // firmata retrieve list of ports
 		static std::vector<BlePortInfo> listPorts(int timeout=10 /*seconds*/, int maxDevices=0);
 
@@ -111,6 +114,9 @@ namespace firmata {
 
                 // connect callback
                 std::function<void()> m_scancallback;
+
+                // are we batching writes
+                bool m_writebatch = false;
 
                 /////////////////////////////////////////////////////////////
                 // ble methods
