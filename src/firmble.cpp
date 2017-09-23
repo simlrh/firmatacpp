@@ -77,7 +77,7 @@ using namespace BLEPP;
 
 namespace {
     // debug integration
-    int s_debug = 1;
+    bool s_debug = 0;
 
     // time to shut down
     bool s_shutdown = false;
@@ -109,6 +109,10 @@ namespace firmata {
     // max number of queued messages
     size_t FirmBle::s_max_queued_messages = 1000;
 
+    void FirmBle::enableDebug(bool enable)
+    {
+        s_debug = enable;
+    }
     ///////////////////////////////////////////////////
     // Firmata methods
 

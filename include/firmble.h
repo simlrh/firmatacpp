@@ -43,6 +43,8 @@ namespace firmata {
 		void write_batch(bool start);
                 // firmata retrieve list of ports
 		static std::vector<BlePortInfo> listPorts(int timeout=10 /*seconds*/, int maxDevices=0);
+                // enable ble debug
+                static void enableDebug(bool enable=true);
 
 	private:
 
