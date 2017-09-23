@@ -223,8 +223,9 @@ namespace firmata {
 
 					value = FIRMATA_COMBINE_LSB_MSB(lsb, msb);
 					for (int pin = 0; pin < 8; pin++) {
-						if (pins[port * 8 + pin].mode == MODE_INPUT) {
-							pins[port * 8 + pin].value = FIRMATA_NTH_BIT(value, pin);
+						int thepin = port * 8 + pin;
+						if ((pins[thepin].mode == MODE_INPUT) || (pins[thepin].mode == MODE_PULLUP)) {
+							pins[thepin].value = FIRMATA_NTH_BIT(value, pin);
 						}
 					}
 					i += 2;

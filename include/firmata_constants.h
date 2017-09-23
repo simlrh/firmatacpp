@@ -11,6 +11,11 @@
 #define MODE_SERVO	0x04
 #define MODE_SHIFT	0x05
 #define MODE_I2C	0x06
+#define MODE_ONEWIRE    0x07
+#define MODE_STEPPER    0x08
+#define MODE_ENCODER    0x09
+#define MODE_SERIAL     0x0a
+#define MODE_PULLUP     0x0b
 
 #define LOW			0
 #define HIGH		1
