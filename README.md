@@ -12,3 +12,5 @@ CMake Error at vendor/serial/CMakeLists.txt:30 (add_library):
 ```
 
 then the magic commands are: `git submodule init && git submodule update`
+
+Packages required to build on Ubuntu are: bluetooth bluez libbluetooth-dev libboost-all-dev
