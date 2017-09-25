@@ -1,3 +1,6 @@
 [submodule "vendor/serial"]
 	path = vendor/serial
 	url = https://github.com/wjwwood/serial.git
+[submodule "vendor/libblepp"]
+	path = vendor/libblepp
+	url = https://github.com/edrosten/libblepp.git

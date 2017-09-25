@@ -27,8 +27,8 @@ namespace firmata {
 
 		void pinMode(uint8_t pin, uint8_t mode);
 		void digitalWrite(uint8_t pin, uint8_t value);
-		void analogWrite(uint8_t pin, uint32_t value);
-		void analogWrite(const std::string& channel, uint32_t value);
+		void analogWrite(uint8_t pin, uint32_t value); // pin = digital pin
+		void analogWrite(const std::string& channel, uint32_t value); // pin = "AN" where N is analog pin
 
 		uint8_t digitalRead(uint8_t pin);
 		uint32_t analogRead(uint8_t pin);
@@ -38,16 +38,25 @@ namespace firmata {
 		void sysexCommand(uint8_t sysex_command);
 		void sysexCommand(std::vector<uint8_t> sysex_command);
 
-		void reportAnalog(uint8_t channel, uint8_t enable = 1);
-		void reportDigital(uint8_t port, uint8_t enable = 1);
+		void reportAnalog(uint8_t channel, uint8_t enable = 1); // pin = analog pin
+		void reportDigital(uint8_t port, uint8_t enable = 1); // port = port group
+		void reportDigitalPin(uint8_t pin, uint8_t enable = 1);
 		void setSamplingInterval(uint32_t intervalms);
+
+                const uint8_t getNumPins() const { return m_numPins; }
+                const std::vector<uint8_t> & getPinCaps(uint8_t pin) const { return pins[pin].supported_modes; }
+                const std::vector<uint8_t> & getPinResolutions(uint8_t pin) const { return pins[pin].resolutions; }
+                uint8_t getPinCapResolution(uint8_t pin, uint8_t mode) const;
+                uint8_t getPinMode(uint8_t pin) { return pins[pin].mode; }
+                uint8_t getPinAnalogChannel(uint8_t pin) const { return pins[pin].analog_channel; } // Dpin -> Apin
+                uint8_t getPinFromAnalogChannel(uint8_t apin) const { return apins[apin]; } // Apin -> Dpin
 
 	protected:
 		virtual bool handleSysex(uint8_t command, std::vector<uint8_t> data);
 		virtual bool handleString(std::string data);
 
-		bool awaitResponse(uint8_t command, uint32_t timeout = 1000);
-		bool awaitSysexResponse(uint8_t sysexCommand, uint32_t timeout = 1000);
+		bool awaitResponse(uint8_t command, uint32_t timeout = 1000 /* ms */ );
+		bool awaitSysexResponse(uint8_t sysexCommand, uint32_t timeout = 1000 /* ms */ );
 
 	private:
 		void initPins();
@@ -64,7 +73,9 @@ namespace firmata {
 
 
 		FirmIO* m_firmIO;
+                uint8_t m_numPins;
 		t_pin pins[128];
+                uint8_t apins[128];
 	};
 
 }
